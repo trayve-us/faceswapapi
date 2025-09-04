@@ -25,6 +25,11 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip
+
+# Install PyTorch CPU version first
+RUN pip install --no-cache-dir torch==2.1.0+cpu torchvision==0.16.0+cpu --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code and scripts

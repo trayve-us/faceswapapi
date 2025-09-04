@@ -11,9 +11,7 @@ numpy==1.24.4
 scikit-image==0.24.0
 scipy==1.11.4
 
-# Machine Learning
-torch==2.1.0+cpu
-torchvision==0.16.0+cpu
+# Machine Learning - PyTorch installed separately in Dockerfile
 
 # CodeFormer specific dependencies
 basicsr==1.4.2
