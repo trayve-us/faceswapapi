@@ -12,9 +12,8 @@ scikit-image==0.21.0
 scipy==1.11.4
 
 # Machine Learning - Standard versions (will use CPU on Render)
-torch==2.1.0+cpu
-torchvision==0.16.0+cpu
--f https://download.pytorch.org/whl/torch_stable.html
+torch==2.1.0
+torchvision==0.16.0
 
 # Core dependencies for CodeFormer
 timm==0.9.8

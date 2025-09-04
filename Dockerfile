@@ -27,17 +27,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application code and scripts
 COPY main.py .
+COPY download_models.sh .
 
-# Create model download script with proper error handling
-RUN echo '#!/bin/bash\n\
-export QT_QPA_PLATFORM=offscreen\n\
-export OPENCV_IO_ENABLE_OPENEXR=1\n\
-cd CodeFormer\n\
-python -c "import sys; sys.path.append(\".\"); sys.path.append(\"./basicsr\"); print(\"Testing imports...\"); import cv2; print(\"OpenCV OK\"); import torch; print(\"PyTorch OK\"); from facelib.utils.face_restoration_helper import FaceRestoreHelper; print(\"FaceRestoreHelper OK\"); helper = FaceRestoreHelper(1, face_size=512, crop_ratio=(1, 1), det_model=\"retinaface_resnet50\", save_ext=\"png\", use_parse=False, device=\"cpu\"); print(\"Models downloaded successfully\")" || echo "Model download failed but continuing..."\n\
-echo "Model download script completed"' > download_models.sh
-
+# Make script executable
 RUN chmod +x download_models.sh
 
 # Download models during build
