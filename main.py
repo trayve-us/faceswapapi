@@ -46,7 +46,11 @@ app = FastAPI(title="CodeFormer Face Swap API", version="1.0.0")
 # CORS middleware for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js default port
+    allow_origins=[
+        "http://localhost:3000",  # Local development
+        "https://outfitsimulator.vercel.app/",  # Replace with your actual domain
+        "https://trayve.app",  # Add your custom domain if you have one
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
