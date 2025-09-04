@@ -3,6 +3,9 @@
 # Set environment variables for headless operation
 export QT_QPA_PLATFORM=offscreen
 export OPENCV_IO_ENABLE_OPENEXR=1
+export OPENCV_IO_MAX_IMAGE_PIXELS=1048576000
+export DISPLAY=""
+export MPLBACKEND=Agg
 
 echo "Starting model download for CodeFormer..."
 

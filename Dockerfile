@@ -15,6 +15,13 @@ RUN apt-get update && apt-get install -y \
     libgthread-2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
+# Set environment variables for headless OpenCV operation
+ENV OPENCV_IO_ENABLE_OPENEXR=1
+ENV OPENCV_IO_MAX_IMAGE_PIXELS=1048576000
+ENV QT_QPA_PLATFORM=offscreen
+ENV DISPLAY=""
+ENV MPLBACKEND=Agg
+
 WORKDIR /app
 
 # Clone CodeFormer repository
@@ -31,6 +38,10 @@ RUN pip install --no-cache-dir torch==2.1.0+cpu torchvision==0.16.0+cpu --index-
 
 # Install remaining dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Ensure we only have headless OpenCV (remove any conflicts)
+RUN pip uninstall -y opencv-python opencv-contrib-python || true
+RUN pip install --no-cache-dir --force-reinstall opencv-python-headless==4.11.0.86
 
 # Copy application code and scripts
 COPY main.py .

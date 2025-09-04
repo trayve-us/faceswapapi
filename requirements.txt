@@ -4,7 +4,7 @@ fastapi==0.115.9
 uvicorn[standard]==0.30.6
 python-multipart==0.0.9
 
-# Image processing
+# Image processing - ONLY use headless OpenCV
 Pillow==10.0.1
 opencv-python-headless==4.11.0.86
 numpy==1.24.4
