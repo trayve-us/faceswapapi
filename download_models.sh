@@ -40,7 +40,7 @@ sys.path.append('./basicsr')
 try:
     from facelib.utils.face_restoration_helper import FaceRestoreHelper
     print('✅ FaceRestoreHelper imported successfully')
-    
+
     helper = FaceRestoreHelper(
         upscale_factor=1,
         face_size=512,
@@ -52,7 +52,7 @@ try:
     )
     print('✅ FaceRestoreHelper initialized successfully')
     print('✅ Models downloaded successfully')
-    
+
 except Exception as e:
     print(f'❌ FaceRestoreHelper initialization failed: {e}')
     import traceback

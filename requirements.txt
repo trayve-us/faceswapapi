@@ -17,7 +17,7 @@ torchvision==0.15.2
 # CodeFormer dependencies
 facexlib==0.3.0
 lpips==0.1.4
-realesrgan==0.3.0
+
 
 # Utilities
 pyyaml==6.0.2
