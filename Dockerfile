@@ -25,9 +25,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Download CodeFormer pretrained models
 RUN cd /app/CodeFormer && \
-    python basicsr/utils/download_util.py basicsr https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth weights/CodeFormer/codeformer.pth && \
-    python basicsr/utils/download_util.py basicsr https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/detection_Resnet50_Final.pth weights/facelib/detection_Resnet50_Final.pth && \
-    python basicsr/utils/download_util.py basicsr https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/parsing_parsenet.pth weights/facelib/parsing_parsenet.pth
+    mkdir -p weights/CodeFormer weights/facelib && \
+    wget -O weights/CodeFormer/codeformer.pth https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth && \
+    wget -O weights/facelib/detection_Resnet50_Final.pth https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/detection_Resnet50_Final.pth && \
+    wget -O weights/facelib/parsing_parsenet.pth https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/parsing_parsenet.pth
 
 # Copy FastAPI application
 COPY . .
