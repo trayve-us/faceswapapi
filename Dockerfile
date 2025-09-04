@@ -29,6 +29,12 @@ RUN cd /app/CodeFormer && \
     wget -O weights/facelib/detection_Resnet50_Final.pth https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/detection_Resnet50_Final.pth && \
     wget -O weights/facelib/parsing_parsenet.pth https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/parsing_parsenet.pth
 
+# Fix missing basicsr.version module that CodeFormer dependencies expect
+RUN echo '"""BasicSR version information"""' > /app/CodeFormer/basicsr/version.py && \
+    echo '' >> /app/CodeFormer/basicsr/version.py && \
+    echo '__version__ = "1.3.2"' >> /app/CodeFormer/basicsr/version.py && \
+    echo '__gitsha__ = "unknown"' >> /app/CodeFormer/basicsr/version.py
+
 # Copy application
 COPY . .
 
