@@ -11,16 +11,18 @@ numpy==2.1.2
 scikit-image==0.24.0
 scipy==1.14.1
 
-# Machine Learning - PyTorch installed separately in Dockerfile
+# Machine Learning - PyTorch will be installed separately in Dockerfile
+# torch>=2.0.0
+# torchvision>=0.15.0
 
-# CodeFormer specific dependencies
+# CodeFormer specific dependencies - exact versions from working server
 basicsr==1.4.2
 facexlib==0.3.0
 lpips==0.1.4
 gfpgan==1.3.8
 realesrgan==0.3.0
 
-# Utilities
+# Utilities - exact versions from working server
 pyyaml==6.0.2
 requests==2.32.3
 tqdm==4.66.5

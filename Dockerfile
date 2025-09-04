@@ -33,11 +33,16 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip
 
-# Install PyTorch CPU version first
-RUN pip install --no-cache-dir torch==2.5.1+cpu torchvision==0.20.1+cpu --index-url https://download.pytorch.org/whl/cpu
+# Install PyTorch CPU version first - using stable compatible versions
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # Install remaining dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install CodeFormer's basicsr in development mode for proper module setup
+WORKDIR /app/CodeFormer
+RUN pip install -e .
+WORKDIR /app
 
 # Ensure we only have headless OpenCV (remove any conflicts)
 RUN pip uninstall -y opencv-python opencv-contrib-python || true
