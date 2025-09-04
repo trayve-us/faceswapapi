@@ -36,6 +36,11 @@ COPY . .
 # Update Python path for CodeFormer imports
 ENV PYTHONPATH="/app:/app/CodeFormer:/app/CodeFormer/basicsr:${PYTHONPATH}"
 
+# Environment variables for headless OpenCV operation
+ENV QT_QPA_PLATFORM=offscreen
+ENV DISPLAY=
+ENV MPLBACKEND=Agg
+
 # Expose port (Render will set the PORT env var)
 EXPOSE 8000
 
