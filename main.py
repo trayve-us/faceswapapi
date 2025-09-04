@@ -17,6 +17,22 @@ import base64
 from typing import Optional
 import json
 
+# Debug: Check if CodeFormer directory exists
+print("🔍 Debugging CodeFormer setup...")
+print(f"Current working directory: {os.getcwd()}")
+print(f"Directory contents: {os.listdir('.')}")
+
+if os.path.exists('./CodeFormer'):
+    print("✅ CodeFormer directory found")
+    print(f"CodeFormer contents: {os.listdir('./CodeFormer')}")
+    if os.path.exists('./CodeFormer/facelib'):
+        print("✅ facelib directory found")
+        print(f"facelib contents: {os.listdir('./CodeFormer/facelib')}")
+    else:
+        print("❌ facelib directory NOT found")
+else:
+    print("❌ CodeFormer directory NOT found")
+
 # Add CodeFormer to path - for Render deployment
 sys.path.append('./CodeFormer')
 sys.path.append('./CodeFormer/basicsr')
@@ -33,6 +49,7 @@ try:
     print("✅ CodeFormer components imported successfully")
 except ImportError as e:
     print(f"⚠️  CodeFormer import failed: {e}")
+    print(f"Python path: {sys.path}")
     CODEFORMER_AVAILABLE = False
 
 # Force CPU for Render deployment
@@ -70,6 +87,7 @@ class FaceSwapProcessor:
         if not CODEFORMER_AVAILABLE:
             print("⚠️  CodeFormer not available - using fallback mode")
             self.face_helper = None
+            self.net = None
             return
 
         try:
@@ -85,16 +103,23 @@ class FaceSwapProcessor:
                 device=self.device
             )
 
+            # Initialize CodeFormer model for face enhancement
+            self.net = None  # We'll skip the enhancement for now to avoid model loading issues
+            
             print("✅ FaceSwapProcessor initialized with RetinaFace ResNet50")
         except Exception as e:
             print(f"❌ FaceSwapProcessor initialization failed: {e}")
             self.face_helper = None
+            self.net = None
 
     def detect_and_extract_face(self, image_array: np.ndarray):
         """
         Detect and extract face from image using CodeFormer's pipeline
         Reference: CodeFormer/inference_codeformer.py lines 180-190
         """
+        if self.face_helper is None:
+            return None, None, "CodeFormer face detection not available - initialization failed"
+            
         try:
             # Clean previous results
             self.face_helper.clean_all()
@@ -149,8 +174,12 @@ class FaceSwapProcessor:
 
     def complete_face_swap(self, source_image, target_image):
         """
-        Complete face swap: extract face from source, replace face in target, enhance with CodeFormer
+        Complete face swap: extract face from source, replace face in target
+        Simplified version without CodeFormer enhancement to avoid model issues
         """
+        if self.face_helper is None:
+            return None, "CodeFormer face detection not available - initialization failed"
+            
         try:
             # Step 1: Extract face from source image
             self.face_helper.clean_all()
@@ -166,9 +195,10 @@ class FaceSwapProcessor:
                 return None, "Failed to extract face from source image"
 
             source_face = self.face_helper.cropped_faces[0]
+            source_affine = self.face_helper.affine_matrices[0]
             print(f"Extracted source face: {source_face.shape}")
 
-            # Step 2: Process target image and replace face
+            # Step 2: Process target image and get face location
             self.face_helper.clean_all()
             self.face_helper.read_image(target_image)
 
@@ -179,53 +209,25 @@ class FaceSwapProcessor:
 
             print(f"Detected {num_target_faces} faces in target image")
 
-            # Align and warp target faces
+            # Align and warp target faces to get transformation matrix
             self.face_helper.align_warp_face()
-            if len(self.face_helper.cropped_faces) == 0:
-                return None, "Failed to extract face from target image"
+            if len(self.face_helper.affine_matrices) == 0:
+                return None, "Failed to get target face transformation"
 
-            # Step 3: Replace target face with source face (resize to match)
-            target_face_shape = self.face_helper.cropped_faces[0].shape
-            source_face_resized = cv2.resize(source_face, (target_face_shape[1], target_face_shape[0]))
+            target_affine = self.face_helper.affine_matrices[0]
 
-            # Replace the first target face with resized source face
-            self.face_helper.cropped_faces[0] = source_face_resized
-            print(f"Replaced target face with source face: {source_face_resized.shape}")
+            # Step 3: Use paste_face_back for direct face swapping
+            # Calculate inverse affine transformation for target
+            inverse_affine = cv2.invertAffineTransform(target_affine)
 
-            # Step 4: Enhance all faces with CodeFormer
-            enhanced_faces = []
-            for idx, cropped_face in enumerate(self.face_helper.cropped_faces):
-                # Convert to tensor
-                cropped_face_t = img2tensor(cropped_face / 255., bgr2rgb=True, float32=True)
-                normalize(cropped_face_t, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5), inplace=True)
-                cropped_face_t = cropped_face_t.unsqueeze(0).to(self.device)
+            # Use CodeFormer's paste_face_back function for seamless blending
+            result_image = paste_face_back(target_image, source_face, inverse_affine)
 
-                try:
-                    with torch.no_grad():
-                        output = self.net(cropped_face_t, w=0.5, adain=True)[0]
-                        enhanced_face = tensor2img(output, rgb2bgr=True, min_max=(-1, 1))
-                    torch.cuda.empty_cache()
-                except Exception as error:
-                    print(f"CodeFormer enhancement failed for face {idx}: {error}")
-                    enhanced_face = tensor2img(cropped_face_t, rgb2bgr=True, min_max=(-1, 1))
-
-                enhanced_face = enhanced_face.astype('uint8')
-                enhanced_faces.append(enhanced_face)
-                self.face_helper.add_restored_face(enhanced_face, cropped_face)
-
-            print(f"Enhanced {len(enhanced_faces)} faces with CodeFormer")
-
-            # Step 5: Calculate inverse affine transformations and paste back
-            self.face_helper.get_inverse_affine(None)
-
-            # Paste enhanced faces back to target image
-            result_image = self.face_helper.paste_faces_to_input_image()
-
-            if result_image is None:
-                return None, "Failed to paste enhanced faces back to target image"
+            # Convert to uint8 for proper image format
+            result_image = np.clip(result_image, 0, 255).astype(np.uint8)
 
             print(f"Final result shape: {result_image.shape}")
-            return result_image, "Face swap completed successfully with CodeFormer enhancement"
+            return result_image, "Face swap completed successfully"
 
         except Exception as e:
             print(f"Complete face swap error: {str(e)}")

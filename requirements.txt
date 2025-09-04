@@ -23,5 +23,11 @@ lmdb==1.4.1
 pyyaml==6.0.1
 requests==2.31.0
 
+# Missing dependencies for CodeFormer
+lpips==0.1.4
+basicsr==1.4.2
+facexlib==0.3.0
+realesrgan==0.3.0
+
 # Additional utilities
 tqdm==4.66.1
