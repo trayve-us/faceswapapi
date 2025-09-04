@@ -1,33 +1,32 @@
-# CodeFormer Face Swap API - Python 3.9 Compatible
+# Face Swap Server Requirements - Based on working server configuration
 # Core web server
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
+fastapi==0.115.9
+uvicorn[standard]==0.32.0
+python-multipart==0.0.12
 
-# Image processing (Python 3.9 compatible versions)
-Pillow==10.1.0
-opencv-python-headless==4.8.1.78
-numpy==1.24.3
-scikit-image==0.21.0
-scipy==1.11.4
+# Image processing
+Pillow==10.4.0
+opencv-python-headless==4.11.0.86
+numpy==2.1.2
+scikit-image==0.24.0
+scipy==1.14.1
 
-# Machine Learning - Standard versions (will use CPU on Render)
-torch==2.1.0
-torchvision==0.16.0
-
-# Core dependencies for CodeFormer
-timm==0.9.8
-addict==2.4.0
-future==0.18.3
-lmdb==1.4.1
-pyyaml==6.0.1
-requests==2.31.0
+# Machine Learning
+torch>=2.0.0
+torchvision>=0.15.0
 
 # CodeFormer specific dependencies
-lpips==0.1.4
 basicsr==1.4.2
 facexlib==0.3.0
+lpips==0.1.4
 gfpgan==1.3.8
+realesrgan==0.3.0
 
-# Additional utilities
-tqdm==4.66.1
+# Utilities
+pyyaml==6.0.2
+requests==2.32.3
+tqdm==4.66.5
+gdown==5.2.0
+
+# Optional for better performance
+accelerate==1.0.1
