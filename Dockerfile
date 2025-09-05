@@ -42,6 +42,8 @@ COPY . .
 ENV PYTHONPATH="/app:/app/CodeFormer:/app/CodeFormer/basicsr"
 ENV OPENCV_IO_ENABLE_OPENEXR=0
 
+# DigitalOcean typically uses port 8080, but support both 8000 and 8080
 EXPOSE 8000
+EXPOSE 8080
 
 CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}

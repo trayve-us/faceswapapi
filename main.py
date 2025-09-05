@@ -64,6 +64,7 @@ class FaceSwapProcessor:
     def __init__(self):
         self.device = get_device()
         print(f"Using device: {self.device}")
+        self.net = None  # Initialize CodeFormer network
 
         if not CODEFORMER_AVAILABLE:
             print("⚠️  CodeFormer not available - using fallback mode")
@@ -82,6 +83,20 @@ class FaceSwapProcessor:
                 use_parse=False,  # We don't need parsing for face swap
                 device=self.device
             )
+
+            # Initialize CodeFormer network
+            try:
+                self.net = CodeFormer(dim_embd=512, codebook_size=1024, n_head=8, n_layers=9, 
+                                    connect_list=['32', '64', '128', '256']).to(self.device)
+                # Load pretrained weights
+                checkpoint_path = '/app/CodeFormer/weights/CodeFormer/codeformer.pth'
+                checkpoint = torch.load(checkpoint_path, map_location=self.device)
+                self.net.load_state_dict(checkpoint['params_ema'])
+                self.net.eval()
+                print("✅ CodeFormer network loaded successfully")
+            except Exception as e:
+                print(f"⚠️  CodeFormer network loading failed: {e}")
+                self.net = None
 
             print("✅ FaceSwapProcessor initialized with RetinaFace ResNet50")
         except Exception as e:
@@ -410,6 +425,11 @@ async def complete_face_swap(
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+    
+    # Use PORT environment variable for DigitalOcean compatibility
+    port = int(os.environ.get("PORT", 8000))
+    
     print("Starting CodeFormer Face Swap Server...")
-    print("API Documentation available at: http://localhost:8000/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    print(f"API Documentation available at: http://localhost:{port}/docs")
+    uvicorn.run(app, host="0.0.0.0", port=port)
