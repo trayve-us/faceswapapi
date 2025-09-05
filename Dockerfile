@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.9.18-slim
 
 WORKDIR /app
 
@@ -6,12 +6,15 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     git \
     wget \
+    build-essential \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
     libxrender1 \
     libgomp1 \
     libgl1 \
+    libgthread-2.0-0 \
+    libgtk-3-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone CodeFormer repository
@@ -19,8 +22,8 @@ RUN git clone https://github.com/sczhou/CodeFormer.git /app/CodeFormer
 
 # Copy and install requirements
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip==23.2.1 setuptools==68.0.0 wheel==0.41.0
+RUN pip install --no-cache-dir --timeout=300 -r requirements.txt
 
 # Download CodeFormer models
 RUN cd /app/CodeFormer && \

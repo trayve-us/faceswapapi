@@ -1,26 +1,27 @@
 # Core web server
-fastapi==0.115.9
-uvicorn[standard]==0.32.0
-python-multipart==0.0.12
+fastapi==0.95.0
+uvicorn[standard]==0.20.0
+python-multipart==0.0.5
 
 # Image processing - HEADLESS ONLY (no opencv-python)
-Pillow==10.4.0
-opencv-python-headless==4.8.1.78
-numpy==1.24.3
-scikit-image==0.21.0
-scipy==1.11.0
+Pillow==9.4.0
+opencv-python-headless==4.7.1.72
+numpy==1.23.5
+scikit-image==0.19.3
+scipy==1.9.3
 
-# Machine Learning
-torch==2.0.1
-torchvision==0.15.2
+# Machine Learning - Python 3.9 compatible versions
+torch==1.13.1
+torchvision==0.14.1
+torchaudio==0.13.1
 
 # CodeFormer dependencies
-facexlib==0.3.0
+facexlib==0.2.5
 lpips==0.1.4
-
+basicsr==1.4.2
 
 # Utilities
-pyyaml==6.0.2
-requests==2.32.3
-tqdm==4.66.5
-gdown==5.2.0
+pyyaml==6.0
+requests==2.28.2
+tqdm==4.64.1
+gdown==4.6.0
