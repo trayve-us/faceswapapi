@@ -1,0 +1,31 @@
+{
+  "name": "CodeFormer Face Swap API",
+  "description": "Face swapping API using CodeFormer for high-quality results",
+  "keywords": ["python", "fastapi", "face-swap", "ai", "computer-vision"],
+  "stack": "heroku-22",
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "env": {
+    "PYTHONPATH": {
+      "description": "Python path for CodeFormer modules",
+      "value": ".:./CodeFormer:./CodeFormer/basicsr"
+    },
+    "OPENCV_IO_ENABLE_OPENEXR": {
+      "description": "Disable OpenEXR support for OpenCV",
+      "value": "0"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "Standard-1X"
+    }
+  },
+  "addons": [],
+  "scripts": {
+    "postdeploy": "echo 'CodeFormer Face Swap API deployed successfully!'"
+  }
+}

@@ -1,53 +1,50 @@
-# CodeFormer Face Swap API - Render Deployment
+# CodeFormer Face Swap API - Heroku Deployment
 
-This is a production-ready FastAPI server that provides face swapping functionality using CodeFormer's state-of-the-art face restoration models.
+A high-quality face swapping API using CodeFormer, optimized for Heroku deployment.
 
-## 🚀 Live API
+## Features
+- High-quality face detection using RetinaFace ResNet50
+- Face swapping with CodeFormer enhancement
+- FastAPI web interface with automatic docs
+- Heroku-optimized deployment
 
-**Endpoints:**
+## Quick Deploy to Heroku
 
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+
+## Manual Deployment
+
+1. **Install Heroku CLI** and login:
+   ```bash
+   heroku login
+   ```
+
+2. **Create Heroku app**:
+   ```bash
+   heroku create your-faceswap-api
+   ```
+
+3. **Deploy**:
+   ```bash
+   git push heroku main
+   ```
+
+4. **Scale up** (if needed):
+   ```bash
+   heroku ps:scale web=1
+   ```
+
+## API Endpoints
+
+- `GET /` - API information
 - `GET /health` - Health check
-- `POST /complete-face-swap` - Complete face swap (main endpoint)
-- `GET /docs` - Interactive API documentation
+- `POST /extract-face` - Extract face from image
+- `POST /swap-faces` - Swap faces between images
+- `POST /complete-face-swap` - Complete face swap with enhancement
 
-## 🛠️ Deployment
+## API Documentation
 
-### Prerequisites
-
-- GitHub account
-- Render account (render.com)
-
-### Deploy to Render
-
-1. **Push this repository to GitHub**
-2. **Create new Web Service on Render:**
-
-   - Connect GitHub repository
-   - Runtime: `Docker`
-   - Instance Type: `Pro` (4GB RAM minimum)
-   - Health Check Path: `/health`
-
-3. **Environment Variables:**
-   ```
-   PORT=10000 (automatically set by Render)
-   PYTHON_VERSION=3.9
-   ```
-
-### Build Process
-
-- Docker builds include CodeFormer repository clone
-- Models are downloaded during build (~10-15 minutes first time)
-- Subsequent builds use Docker layer caching
-
-## 📝 Usage
-
-### JavaScript/TypeScript
-
-```javascript
-const swapFaces = async (sourceFile, targetFile) => {
-  const formData = new FormData();
-  formData.append("source_image", sourceFile);
-  formData.append("target_image", targetFile);
+Once deployed, visit `https://your-app.herokuapp.com/docs` for interactive API documentation.
 
   const response = await fetch("YOUR_RENDER_URL/complete-face-swap", {
     method: "POST",

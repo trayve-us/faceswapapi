@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+echo "-----> Running post-compile hook for CodeFormer setup"
+
+# Set environment variables
+export PYTHONPATH="$BUILD_DIR:$BUILD_DIR/CodeFormer:$BUILD_DIR/CodeFormer/basicsr"
+export OPENCV_IO_ENABLE_OPENEXR=0
+
+# Clone CodeFormer repository
+echo "-----> Cloning CodeFormer repository"
+cd $BUILD_DIR
+git clone https://github.com/sczhou/CodeFormer.git
+cd CodeFormer
+
+# Download model weights
+echo "-----> Downloading CodeFormer model weights"
+mkdir -p weights/CodeFormer weights/facelib
+
+# Download CodeFormer weights
+wget -q -O weights/CodeFormer/codeformer.pth https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth
+
+# Download face detection weights
+wget -q -O weights/facelib/detection_Resnet50_Final.pth https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/detection_Resnet50_Final.pth
+wget -q -O weights/facelib/parsing_parsenet.pth https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/parsing_parsenet.pth
+
+# Create basicsr version file
+echo "-----> Setting up BasicSR version"
+echo '"""BasicSR version information"""' > basicsr/version.py
+echo '' >> basicsr/version.py
+echo '__version__ = "1.4.2"' >> basicsr/version.py
+echo '__gitsha__ = "unknown"' >> basicsr/version.py
+
+echo "-----> CodeFormer setup complete"
