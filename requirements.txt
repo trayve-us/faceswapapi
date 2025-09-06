@@ -1,30 +1,23 @@
-# Core web server - Heroku compatible versions
+# Core web server - minimal versions
 fastapi==0.104.1
-uvicorn[standard]==0.24.0
+uvicorn==0.24.0
 python-multipart==0.0.6
 
-# Image processing - HEADLESS ONLY for Heroku
+# Essential image processing - CPU only
 Pillow==10.0.1
 opencv-python-headless==4.8.1.78
 numpy==1.24.4
-scikit-image==0.21.0
-scipy==1.11.4
 
-# Machine Learning - CPU only for Heroku
+# Machine Learning - CPU only, minimal
 torch==2.0.1
 torchvision==0.15.2
 
-# CodeFormer dependencies - verified versions
+# CodeFormer dependencies - essential only
 facexlib==0.3.0
 lpips==0.1.4
 basicsr==1.4.2
-addict==2.4.0
-future==0.18.3
-lmdb==1.4.1
-yapf==0.40.2
 
-# Utilities - stable versions
+# Essential utilities only
 pyyaml==6.0.1
 requests==2.31.0
 tqdm==4.66.1
-gdown==4.7.1

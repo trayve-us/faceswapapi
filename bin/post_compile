@@ -6,28 +6,38 @@ echo "-----> Running post-compile hook for CodeFormer setup"
 export PYTHONPATH="$BUILD_DIR:$BUILD_DIR/CodeFormer:$BUILD_DIR/CodeFormer/basicsr"
 export OPENCV_IO_ENABLE_OPENEXR=0
 
-# Clone CodeFormer repository
-echo "-----> Cloning CodeFormer repository"
+# Clone CodeFormer repository with minimal depth
+echo "-----> Cloning CodeFormer repository (shallow clone)"
 cd $BUILD_DIR
-git clone https://github.com/sczhou/CodeFormer.git
+git clone --depth 1 --single-branch https://github.com/sczhou/CodeFormer.git
 cd CodeFormer
 
-# Download model weights
-echo "-----> Downloading CodeFormer model weights"
+# Remove unnecessary files to save space
+echo "-----> Cleaning up unnecessary files"
+rm -rf .git
+rm -rf docs
+rm -rf assets
+rm -rf inputs
+rm -rf experiments
+rm -rf options
+rm -rf scripts
+rm -rf test*
+rm -rf *.md
+rm -rf LICENSE
+
+# Create directories for runtime model downloads
+echo "-----> Setting up directories for runtime model downloads"
 mkdir -p weights/CodeFormer weights/facelib
 
-# Download CodeFormer weights
-wget -q -O weights/CodeFormer/codeformer.pth https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth
-
-# Download face detection weights
-wget -q -O weights/facelib/detection_Resnet50_Final.pth https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/detection_Resnet50_Final.pth
-wget -q -O weights/facelib/parsing_parsenet.pth https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/parsing_parsenet.pth
-
-# Create basicsr version file
+# Create minimal basicsr version file
 echo "-----> Setting up BasicSR version"
-echo '"""BasicSR version information"""' > basicsr/version.py
-echo '' >> basicsr/version.py
-echo '__version__ = "1.4.2"' >> basicsr/version.py
+echo '__version__ = "1.4.2"' > basicsr/version.py
 echo '__gitsha__ = "unknown"' >> basicsr/version.py
 
-echo "-----> CodeFormer setup complete"
+# Clean up any remaining large files
+find . -name "*.pyc" -delete
+find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+
+echo "-----> CodeFormer setup complete (models will download at runtime)"
+echo "-----> Final CodeFormer directory size:"
+du -sh .
