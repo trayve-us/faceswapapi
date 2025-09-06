@@ -1,43 +1,9 @@
 #!/usr/bin/env bash
 
-echo "-----> Running post-compile hook for CodeFormer setup"
+echo "-----> Running post-compile hook - minimal setup only"
 
-# Set environment variables
-export PYTHONPATH="$BUILD_DIR:$BUILD_DIR/CodeFormer:$BUILD_DIR/CodeFormer/basicsr"
-export OPENCV_IO_ENABLE_OPENEXR=0
+# Only create directory structure, no downloads at build time
+echo "-----> Creating minimal directory structure"
+mkdir -p CodeFormer
 
-# Clone CodeFormer repository with minimal depth
-echo "-----> Cloning CodeFormer repository (shallow clone)"
-cd $BUILD_DIR
-git clone --depth 1 --single-branch https://github.com/sczhou/CodeFormer.git
-cd CodeFormer
-
-# Remove unnecessary files to save space
-echo "-----> Cleaning up unnecessary files"
-rm -rf .git
-rm -rf docs
-rm -rf assets
-rm -rf inputs
-rm -rf experiments
-rm -rf options
-rm -rf scripts
-rm -rf test*
-rm -rf *.md
-rm -rf LICENSE
-
-# Create directories for runtime model downloads
-echo "-----> Setting up directories for runtime model downloads"
-mkdir -p weights/CodeFormer weights/facelib
-
-# Create minimal basicsr version file
-echo "-----> Setting up BasicSR version"
-echo '__version__ = "1.4.2"' > basicsr/version.py
-echo '__gitsha__ = "unknown"' >> basicsr/version.py
-
-# Clean up any remaining large files
-find . -name "*.pyc" -delete
-find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-
-echo "-----> CodeFormer setup complete (models will download at runtime)"
-echo "-----> Final CodeFormer directory size:"
-du -sh .
+echo "-----> Post-compile complete (all downloads moved to runtime)"

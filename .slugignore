@@ -1,0 +1,58 @@
+# Exclude all large files and dependencies at build time
+# Everything will be downloaded at runtime
+
+# Exclude any cached Python packages
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Exclude test files
+test/
+tests/
+*test*
+spec/
+
+# Exclude docs and assets
+docs/
+*.md
+*.rst
+*.txt
+LICENSE
+README*
+
+# Exclude development files
+.git/
+.gitignore
+.vscode/
+.idea/
+*.log
+
+# Exclude any models or weights
+*.pth
+*.pt
+*.bin
+weights/
+models/
+
+# Keep only essential runtime files
+!main.py
+!Procfile
+!requirements.txt
+!bin/
