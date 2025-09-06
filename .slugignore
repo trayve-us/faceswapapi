@@ -29,11 +29,10 @@ tests/
 *test*
 spec/
 
-# Exclude docs and assets
+# Exclude docs and assets (but keep requirements.txt!)
 docs/
 *.md
 *.rst
-*.txt
 LICENSE
 README*
 
@@ -51,8 +50,10 @@ README*
 weights/
 models/
 
-# Keep only essential runtime files
-!main.py
-!Procfile
-!requirements.txt
-!bin/
+# Exclude other deployment configs
+Dockerfile
+.dockerignore
+railway.yml
+download_models.sh
+main_new.py
+main_old.py
