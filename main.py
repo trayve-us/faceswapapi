@@ -53,11 +53,13 @@ def install_runtime_dependencies():
         "torch==2.6.0+cpu --index-url https://download.pytorch.org/whl/cpu",
         "torchvision==0.21.0+cpu --index-url https://download.pytorch.org/whl/cpu", 
         "opencv-python-headless==4.11.0.86",
-        "basicsr==1.4.2",    # Use latest version like server environment
-        "facexlib==0.3.0",   # Use latest version like server environment
+        # Don't install BasicSR and facexlib - they come with CodeFormer locally
         "lpips==0.1.4",
         "pyyaml==6.0.2",     # Use same version as server environment
-        "tqdm==4.66.5"       # Use same version as server environment
+        "tqdm==4.66.5",      # Use same version as server environment
+        "addict",            # From CodeFormer requirements
+        "scikit-image",      # From CodeFormer requirements  
+        "scipy"              # From CodeFormer requirements
     ]
 
     print("🔄 Installing runtime dependencies...")
@@ -205,7 +207,7 @@ def initialize_runtime_in_background():
                 print("✅ Runtime environment ready")
                 RUNTIME_READY = True
 
-        # Check if CodeFormer is available and import accordingly
+        # Check if CodeFormer is available with local BasicSR and facelib
         if RUNTIME_READY:
             try:
                 # Import heavy dependencies after runtime installation
@@ -217,41 +219,49 @@ def initialize_runtime_in_background():
                 import torch
                 print("✅ torch imported successfully")
 
-                # Import CodeFormer dependencies one by one to isolate errors
-                print("🔄 Importing basicsr utils...")
+                # Add CodeFormer directory to Python path for local imports
+                print("🔄 Adding CodeFormer to Python path...")
+                import sys
+                codeformer_path = './CodeFormer'
+                if codeformer_path not in sys.path:
+                    sys.path.insert(0, codeformer_path)
+                print("✅ CodeFormer path added successfully")
+
+                # Import CodeFormer's local dependencies
+                print("🔄 Importing local basicsr utils...")
                 from basicsr.utils import img2tensor, tensor2img
-                print("✅ basicsr utils imported successfully")
+                print("✅ local basicsr utils imported successfully")
                 
-                print("🔄 Importing basicsr registry...")
+                print("🔄 Importing local basicsr registry...")
                 from basicsr.utils.registry import ARCH_REGISTRY
-                print("✅ basicsr registry imported successfully")
+                print("✅ local basicsr registry imported successfully")
                 
                 print("🔄 Importing torchvision transforms...")
                 from torchvision.transforms.functional import normalize
                 print("✅ torchvision transforms imported successfully")
                 
-                print("🔄 Importing CodeFormer architecture...")
+                print("🔄 Importing local CodeFormer architecture...")
                 from basicsr.archs.codeformer_arch import CodeFormer
-                print("✅ CodeFormer architecture imported successfully")
+                print("✅ local CodeFormer architecture imported successfully")
                 
-                print("🔄 Importing face restoration helper...")
+                print("🔄 Importing local face restoration helper...")
                 from facelib.utils.face_restoration_helper import FaceRestoreHelper
-                print("✅ face restoration helper imported successfully")
+                print("✅ local face restoration helper imported successfully")
                 
-                print("🔄 Importing facelib misc...")
+                print("🔄 Importing local facelib misc...")
                 from facelib.utils.misc import is_gray
-                print("✅ facelib misc imported successfully")
+                print("✅ local facelib misc imported successfully")
                 
-                print("🔄 Importing face detection...")
+                print("🔄 Importing local face detection...")
                 from facelib.detection import init_detection_model
-                print("✅ face detection imported successfully")
+                print("✅ local face detection imported successfully")
                 
-                print("🔄 Importing face utils...")
+                print("🔄 Importing local face utils...")
                 from facelib.utils.face_utils import paste_face_back
-                print("✅ face utils imported successfully")
+                print("✅ local face utils imported successfully")
 
                 CODEFORMER_AVAILABLE = True
-                print("✅ CodeFormer imports successful")
+                print("✅ CodeFormer local imports successful")
             except ImportError as e:
                 print(f"⚠️ CodeFormer not available: {e}")
                 print("Running in limited mode without CodeFormer enhancement")
