@@ -18,10 +18,29 @@ if sys.version_info >= (3, 9):
 else:
     from typing import List, Dict
 
-# Fix for BasicSR typing compatibility issues
+# Comprehensive fix for BasicSR typing compatibility issues
 import typing
+# Fix for Python 3.9+ compatibility with older packages
 if not hasattr(typing, '_GenericAlias'):
     typing._GenericAlias = type(typing.List[int])
+
+# Additional compatibility patches for typing
+try:
+    # Patch for subscriptable type errors
+    if hasattr(typing, '_special_form'):
+        typing._special_form.__class__.__getitem__ = lambda self, item: self
+    
+    # Ensure Union is subscriptable
+    if hasattr(typing, 'Union'):
+        if not hasattr(typing.Union, '__getitem__'):
+            typing.Union.__getitem__ = lambda self, item: self
+            
+    # Ensure Optional is subscriptable  
+    if hasattr(typing, 'Optional'):
+        if not hasattr(typing.Optional, '__getitem__'):
+            typing.Optional.__getitem__ = lambda self, item: self
+except Exception as e:
+    print(f"Warning: Typing compatibility patch failed: {e}")
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
@@ -30,15 +49,15 @@ from fastapi.middleware.cors import CORSMiddleware
 def install_runtime_dependencies():
     """Install heavy ML dependencies at runtime"""
     dependencies = [
-        "numpy==1.21.1",  # Use older numpy version that still supports np.bool
-        "torch==2.0.1+cpu --index-url https://download.pytorch.org/whl/cpu",
-        "torchvision==0.15.2+cpu --index-url https://download.pytorch.org/whl/cpu", 
-        "opencv-python-headless==4.8.1.78",
-        "basicsr==1.3.4.9",  # Use older basicsr version for Python compatibility
-        "facexlib==0.2.2",   # Use older facexlib version for compatibility
+        "numpy==1.21.1",     # Use older numpy that supports np.bool (critical fix)
+        "torch==2.6.0+cpu --index-url https://download.pytorch.org/whl/cpu",
+        "torchvision==0.21.0+cpu --index-url https://download.pytorch.org/whl/cpu", 
+        "opencv-python-headless==4.11.0.86",
+        "basicsr==1.4.2",    # Use latest version like server environment
+        "facexlib==0.3.0",   # Use latest version like server environment
         "lpips==0.1.4",
-        "pyyaml==6.0.1",
-        "tqdm==4.66.1"
+        "pyyaml==6.0.2",     # Use same version as server environment
+        "tqdm==4.66.5"       # Use same version as server environment
     ]
 
     print("🔄 Installing runtime dependencies...")
