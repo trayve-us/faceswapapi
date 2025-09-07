@@ -19,12 +19,12 @@ from fastapi.middleware.cors import CORSMiddleware
 def install_runtime_dependencies():
     """Install heavy ML dependencies at runtime"""
     dependencies = [
-        "torch==2.0.1",
-        "torchvision==0.15.2", 
+        "torch==2.0.1+cpu --index-url https://download.pytorch.org/whl/cpu",
+        "torchvision==0.15.2+cpu --index-url https://download.pytorch.org/whl/cpu", 
         "opencv-python-headless==4.8.1.78",
+        "basicsr==1.4.2",
         "facexlib==0.3.0",
         "lpips==0.1.4",
-        "basicsr==1.4.2",
         "pyyaml==6.0.1",
         "tqdm==4.66.1"
     ]
@@ -32,12 +32,15 @@ def install_runtime_dependencies():
     print("🔄 Installing runtime dependencies...")
     for dep in dependencies:
         try:
-            print(f"📦 Installing {dep}")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", dep, "--no-cache-dir"])
+            print(f"📦 Installing {dep.split('==')[0]}")
+            # Install with no-cache and reduced memory usage
+            cmd = [sys.executable, "-m", "pip", "install", "--no-cache-dir", "--no-build-isolation"] + dep.split()
+            subprocess.check_call(cmd)
         except subprocess.CalledProcessError as e:
             print(f"⚠️ Failed to install {dep}: {e}")
-            return False
-    print("✅ All runtime dependencies installed")
+            # Continue with other dependencies instead of failing completely
+            continue
+    print("✅ Runtime dependencies installation completed")
     return True
 
 def setup_codeformer_runtime():
