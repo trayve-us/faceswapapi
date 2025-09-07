@@ -12,8 +12,8 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender1 \
     libgomp1 \
-    libgl1 \
-    libgthread-2.0-0 \
+    libgl1-mesa-glx \
+    libglib2.0-dev \
     libgtk-3-0 \
     && rm -rf /var/lib/apt/lists/*
 
