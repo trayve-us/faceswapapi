@@ -12,6 +12,12 @@ import tempfile
 import urllib.request
 import urllib.error
 
+# Python version compatibility for typing
+if sys.version_info >= (3, 9):
+    from typing import List, Dict
+else:
+    from typing import List, Dict
+
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -179,18 +185,46 @@ def initialize_runtime_in_background():
         if RUNTIME_READY:
             try:
                 # Import heavy dependencies after runtime installation
+                print("🔄 Importing cv2...")
                 import cv2
+                print("✅ cv2 imported successfully")
+                
+                print("🔄 Importing torch...")
                 import torch
+                print("✅ torch imported successfully")
 
-                # Import CodeFormer dependencies
+                # Import CodeFormer dependencies one by one to isolate errors
+                print("🔄 Importing basicsr utils...")
                 from basicsr.utils import img2tensor, tensor2img
+                print("✅ basicsr utils imported successfully")
+                
+                print("🔄 Importing basicsr registry...")
                 from basicsr.utils.registry import ARCH_REGISTRY
+                print("✅ basicsr registry imported successfully")
+                
+                print("🔄 Importing torchvision transforms...")
                 from torchvision.transforms.functional import normalize
+                print("✅ torchvision transforms imported successfully")
+                
+                print("🔄 Importing CodeFormer architecture...")
                 from basicsr.archs.codeformer_arch import CodeFormer
+                print("✅ CodeFormer architecture imported successfully")
+                
+                print("🔄 Importing face restoration helper...")
                 from facelib.utils.face_restoration_helper import FaceRestoreHelper
+                print("✅ face restoration helper imported successfully")
+                
+                print("🔄 Importing facelib misc...")
                 from facelib.utils.misc import is_gray
+                print("✅ facelib misc imported successfully")
+                
+                print("🔄 Importing face detection...")
                 from facelib.detection import init_detection_model
+                print("✅ face detection imported successfully")
+                
+                print("🔄 Importing face utils...")
                 from facelib.utils.face_utils import paste_face_back
+                print("✅ face utils imported successfully")
 
                 CODEFORMER_AVAILABLE = True
                 print("✅ CodeFormer imports successful")
