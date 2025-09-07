@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 def install_runtime_dependencies():
     """Install heavy ML dependencies at runtime"""
     dependencies = [
-        "numpy==1.24.4",  # Pin numpy to compatible version before other packages
+        "numpy==1.21.6",  # Use older numpy version that still supports np.bool
         "torch==2.0.1+cpu --index-url https://download.pytorch.org/whl/cpu",
         "torchvision==0.15.2+cpu --index-url https://download.pytorch.org/whl/cpu",
         "opencv-python-headless==4.8.1.78",
