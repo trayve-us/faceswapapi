@@ -141,8 +141,30 @@ async def startup_event():
     
     print("🚀 Starting runtime environment initialization...")
     
-    # Initialize runtime environment
-    RUNTIME_READY = initialize_runtime_environment()
+    # Try to import dependencies first (they might already be installed)
+    try:
+        import torch
+        import cv2
+        print("✅ Core dependencies already available")
+        dependencies_available = True
+    except ImportError:
+        print("📦 Core dependencies not found, installing...")
+        dependencies_available = False
+    
+    # Initialize runtime environment only if needed
+    if not dependencies_available:
+        RUNTIME_READY = initialize_runtime_environment()
+    else:
+        # Dependencies available, just setup CodeFormer
+        if not setup_codeformer_runtime():
+            print("❌ Failed to setup CodeFormer")
+            RUNTIME_READY = False
+        elif not ensure_models_downloaded():
+            print("❌ Failed to download models")
+            RUNTIME_READY = False
+        else:
+            print("✅ Runtime environment ready")
+            RUNTIME_READY = True
     
     # Check if CodeFormer is available and import accordingly
     if RUNTIME_READY:
@@ -171,8 +193,13 @@ async def startup_event():
 
 def get_device():
     """Get the appropriate device for processing"""
-    # Force CPU for Heroku deployment
-    return torch.device('cpu')
+    try:
+        import torch
+        # Force CPU for deployment
+        return torch.device('cpu')
+    except ImportError:
+        # Fallback if torch not available
+        return 'cpu'
 
 class FaceSwapProcessor:
     def __init__(self):

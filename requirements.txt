@@ -1,7 +1,19 @@
-# Minimal runtime dependencies - heavy ML libs downloaded at runtime
+# Essential dependencies for DigitalOcean deployment
 fastapi==0.104.1
 uvicorn==0.24.0
 python-multipart==0.0.6
 Pillow==10.0.1
 numpy==1.24.4
 requests==2.31.0
+
+# Essential ML dependencies (needed for container startup)
+torch==2.0.1 --index-url https://download.pytorch.org/whl/cpu
+torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cpu
+opencv-python-headless==4.8.1.78
+
+# CodeFormer dependencies
+basicsr==1.4.2
+facexlib==0.3.0
+lpips==0.1.4
+pyyaml==6.0.1
+tqdm==4.66.1
