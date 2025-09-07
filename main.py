@@ -136,63 +136,87 @@ app.add_middleware(
 # Global variables for runtime setup
 RUNTIME_READY = False
 CODEFORMER_AVAILABLE = False
+INITIALIZATION_IN_PROGRESS = False
+
+import threading
+import asyncio
+
+def initialize_runtime_in_background():
+    """Initialize runtime environment in background thread"""
+    global RUNTIME_READY, CODEFORMER_AVAILABLE, INITIALIZATION_IN_PROGRESS
+    
+    INITIALIZATION_IN_PROGRESS = True
+    print("🚀 Starting background runtime environment initialization...")
+    
+    try:
+        # Try to import dependencies first (they might already be installed)
+        try:
+            import torch
+            import cv2
+            print("✅ Core dependencies already available")
+            dependencies_available = True
+        except ImportError:
+            print("📦 Core dependencies not found, installing...")
+            dependencies_available = False
+        
+        # Initialize runtime environment only if needed
+        if not dependencies_available:
+            RUNTIME_READY = initialize_runtime_environment()
+        else:
+            # Dependencies available, just setup CodeFormer
+            if not setup_codeformer_runtime():
+                print("❌ Failed to setup CodeFormer")
+                RUNTIME_READY = False
+            elif not ensure_models_downloaded():
+                print("❌ Failed to download models")
+                RUNTIME_READY = False
+            else:
+                print("✅ Runtime environment ready")
+                RUNTIME_READY = True
+        
+        # Check if CodeFormer is available and import accordingly
+        if RUNTIME_READY:
+            try:
+                # Import heavy dependencies after runtime installation
+                import cv2
+                import torch
+                
+                # Import CodeFormer dependencies  
+                from basicsr.utils import img2tensor, tensor2img
+                from basicsr.utils.registry import ARCH_REGISTRY
+                from torchvision.transforms.functional import normalize
+                from basicsr.archs.codeformer_arch import CodeFormer
+                from facelib.utils.face_restoration_helper import FaceRestoreHelper
+                from facelib.utils.misc import is_gray
+                from facelib.detection import init_detection_model
+                from facelib.utils.face_utils import paste_face_back
+                
+                CODEFORMER_AVAILABLE = True
+                print("✅ CodeFormer imports successful")
+            except ImportError as e:
+                print(f"⚠️ CodeFormer not available: {e}")
+                print("Running in limited mode without CodeFormer enhancement")
+        else:
+            print("⚠️ Runtime environment setup failed")
+    
+    except Exception as e:
+        print(f"❌ Background initialization failed: {e}")
+        RUNTIME_READY = False
+    
+    finally:
+        INITIALIZATION_IN_PROGRESS = False
+        print(f"🔄 Background initialization completed. Runtime ready: {RUNTIME_READY}")
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize runtime environment on app startup"""
-    global RUNTIME_READY, CODEFORMER_AVAILABLE
+    """Start background initialization without blocking"""
+    print("🚀 Starting non-blocking runtime initialization...")
     
-    print("🚀 Starting runtime environment initialization...")
+    # Start initialization in background thread
+    init_thread = threading.Thread(target=initialize_runtime_in_background, daemon=True)
+    init_thread.start()
     
-    # Try to import dependencies first (they might already be installed)
-    try:
-        import torch
-        import cv2
-        print("✅ Core dependencies already available")
-        dependencies_available = True
-    except ImportError:
-        print("📦 Core dependencies not found, installing...")
-        dependencies_available = False
-    
-    # Initialize runtime environment only if needed
-    if not dependencies_available:
-        RUNTIME_READY = initialize_runtime_environment()
-    else:
-        # Dependencies available, just setup CodeFormer
-        if not setup_codeformer_runtime():
-            print("❌ Failed to setup CodeFormer")
-            RUNTIME_READY = False
-        elif not ensure_models_downloaded():
-            print("❌ Failed to download models")
-            RUNTIME_READY = False
-        else:
-            print("✅ Runtime environment ready")
-            RUNTIME_READY = True
-    
-    # Check if CodeFormer is available and import accordingly
-    if RUNTIME_READY:
-        try:
-            # Import heavy dependencies after runtime installation
-            import cv2
-            import torch
-            
-            # Import CodeFormer dependencies  
-            from basicsr.utils import img2tensor, tensor2img
-            from basicsr.utils.registry import ARCH_REGISTRY
-            from torchvision.transforms.functional import normalize
-            from basicsr.archs.codeformer_arch import CodeFormer
-            from facelib.utils.face_restoration_helper import FaceRestoreHelper
-            from facelib.utils.misc import is_gray
-            from facelib.detection import init_detection_model
-            from facelib.utils.face_utils import paste_face_back
-            
-            CODEFORMER_AVAILABLE = True
-            print("✅ CodeFormer imports successful")
-        except ImportError as e:
-            print(f"⚠️ CodeFormer not available: {e}")
-            print("Running in limited mode without CodeFormer enhancement")
-    else:
-        print("⚠️ Runtime environment setup failed")
+    print("✅ Background initialization started. App is ready to serve health checks.")
 
 def get_device():
     """Get the appropriate device for processing"""
@@ -393,12 +417,29 @@ class FaceSwapProcessor:
             traceback.print_exc()
             return None, f"Face swap failed: {str(e)}"
 
-# Global processor instance
-processor = FaceSwapProcessor()
+# Global processor instance - will be initialized in background
+processor = None
+
+def get_processor():
+    """Get the processor instance, initialize if needed"""
+    global processor
+    if processor is None and RUNTIME_READY and CODEFORMER_AVAILABLE:
+        try:
+            processor = FaceSwapProcessor()
+            print("✅ FaceSwapProcessor initialized")
+        except Exception as e:
+            print(f"❌ Failed to initialize FaceSwapProcessor: {e}")
+    return processor
 
 def image_to_array(upload_file: UploadFile) -> np.ndarray:
     """Convert uploaded file to numpy array (BGR format for OpenCV)"""
     try:
+        # Import cv2 if available
+        try:
+            import cv2
+        except ImportError:
+            raise HTTPException(status_code=503, detail="OpenCV not available. Runtime initialization in progress.")
+        
         # Read image data
         image_data = upload_file.file.read()
 
@@ -419,6 +460,12 @@ def image_to_array(upload_file: UploadFile) -> np.ndarray:
 def array_to_response(image_array: np.ndarray) -> StreamingResponse:
     """Convert numpy array to HTTP response"""
     try:
+        # Import cv2 if available
+        try:
+            import cv2
+        except ImportError:
+            raise HTTPException(status_code=503, detail="OpenCV not available. Runtime initialization in progress.")
+        
         # Convert BGR to RGB for proper display
         rgb_image = cv2.cvtColor(image_array, cv2.COLOR_BGR2RGB)
 
@@ -439,18 +486,35 @@ async def root():
     return {
         "message": "CodeFormer Face Swap API",
         "version": "1.0.0",
-        "status": "initializing" if not RUNTIME_READY else "ready",
-        "docs": "/docs"
+        "status": "ready" if RUNTIME_READY else "initializing" if INITIALIZATION_IN_PROGRESS else "starting",
+        "runtime_ready": RUNTIME_READY,
+        "docs": "/docs",
+        "health": "/health"
     }
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint - always returns healthy status for container health checks"""
+    status = "healthy"
+    
+    if INITIALIZATION_IN_PROGRESS:
+        runtime_status = "initializing"
+    elif RUNTIME_READY:
+        runtime_status = "ready"
+    else:
+        runtime_status = "starting"
+    
     return {
-        "status": "healthy",
+        "status": status,  # Always healthy for container health checks
+        "runtime_status": runtime_status,
         "runtime_ready": RUNTIME_READY,
         "codeformer_available": CODEFORMER_AVAILABLE,
-        "message": "Runtime environment initializing..." if not RUNTIME_READY else "Ready for face swapping"
+        "initialization_in_progress": INITIALIZATION_IN_PROGRESS,
+        "message": "Service is healthy. " + (
+            "Runtime environment ready for face swapping" if RUNTIME_READY else
+            "Runtime environment initializing in background..." if INITIALIZATION_IN_PROGRESS else
+            "Runtime environment starting..."
+        )
     }
 
 @app.post("/detect-face")
@@ -459,15 +523,26 @@ async def detect_face(file: UploadFile = File(...)):
     Detect and extract face from uploaded image
     Based on CodeFormer's face detection pipeline
     """
+    if not RUNTIME_READY:
+        raise HTTPException(
+            status_code=503, 
+            detail="Runtime environment not ready. Please wait for initialization to complete."
+        )
+    
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="File must be an image")
 
     try:
+        # Get processor instance
+        proc = get_processor()
+        if proc is None:
+            raise HTTPException(status_code=503, detail="Face processing system not ready")
+        
         # Convert to numpy array
         image_array = image_to_array(file)
 
         # Extract face using CodeFormer's algorithm
-        extracted_face, affine_matrix, message = processor.detect_and_extract_face(image_array)
+        extracted_face, affine_matrix, message = proc.detect_and_extract_face(image_array)
 
         if extracted_face is None:
             raise HTTPException(status_code=400, detail=message)
@@ -505,6 +580,12 @@ async def swap_faces(
     Swap faces using CodeFormer's fusion algorithm
     Based on paste_face_back function
     """
+    if not RUNTIME_READY:
+        raise HTTPException(
+            status_code=503, 
+            detail="Runtime environment not ready. Please wait for initialization to complete."
+        )
+    
     if not target_image.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="Target image must be an image file")
 
@@ -512,6 +593,11 @@ async def swap_faces(
         raise HTTPException(status_code=400, detail="Source face and affine matrix required")
 
     try:
+        # Get processor instance
+        proc = get_processor()
+        if proc is None:
+            raise HTTPException(status_code=503, detail="Face processing system not ready")
+        
         # Convert target image to array
         target_array = image_to_array(target_image)
 
@@ -525,7 +611,7 @@ async def swap_faces(
         affine_array = np.array(affine_data, dtype=np.float32)
 
         # Perform face swap using CodeFormer's algorithm
-        result_image, message = processor.swap_faces(target_array, face_array, affine_array)
+        result_image, message = proc.swap_faces(target_array, face_array, affine_array)
 
         if result_image is None:
             raise HTTPException(status_code=400, detail=message)
@@ -547,16 +633,27 @@ async def complete_face_swap(
     Complete face swap pipeline: detect face in source, swap into target, enhance with CodeFormer
     Uses proper CodeFormer workflow for best quality results
     """
+    if not RUNTIME_READY:
+        raise HTTPException(
+            status_code=503, 
+            detail="Runtime environment not ready. Please wait for initialization to complete."
+        )
+    
     if not source_image.content_type.startswith('image/') or not target_image.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="Both files must be images")
 
     try:
+        # Get processor instance
+        proc = get_processor()
+        if proc is None:
+            raise HTTPException(status_code=503, detail="Face processing system not ready")
+        
         # Convert uploaded files to numpy arrays
         source_array = image_to_array(source_image)
         target_array = image_to_array(target_image)
 
         # Use complete face swap workflow
-        result_image, message = processor.complete_face_swap(source_array, target_array)
+        result_image, message = proc.complete_face_swap(source_array, target_array)
 
         if result_image is None:
             raise HTTPException(status_code=400, detail=message)
