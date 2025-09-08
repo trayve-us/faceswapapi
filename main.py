@@ -294,33 +294,39 @@ def initialize_runtime_in_background():
                 print("❌ Failed to download models")
                 RUNTIME_READY = False
             else:
-                print("✅ Runtime environment ready")
-                RUNTIME_READY = True
+                print("✅ Models downloaded, attempting CodeFormer imports...")
+                # Don't set RUNTIME_READY = True yet - wait for successful imports
 
         # Check if CodeFormer is available and import accordingly
-        if RUNTIME_READY:
-            try:
-                # CRITICAL: Import cv2 FIRST to avoid numpy._DTypeMeta error
-                import cv2
-                print("✅ OpenCV imported successfully")
-                
-                # Import torch after cv2
-                import torch
-                print("✅ PyTorch imported successfully")
-                
-                # LAZY LOADING: Don't import CodeFormer components here to avoid DTypeMeta error
-                # Instead, import them only when actually needed in the API endpoints
-                print("🔄 CodeFormer components will be imported lazily when needed")
-                
+        # RUNTIME_READY is still False at this point - only set it after successful imports
+        try:
+            # CRITICAL: Import cv2 FIRST to avoid numpy._DTypeMeta error
+            import cv2
+            print("✅ OpenCV imported successfully")
+            
+            # Import torch after cv2
+            import torch
+            print("✅ PyTorch imported successfully")
+            
+            # Test CodeFormer lazy import to ensure it will work
+            print("🔄 Testing CodeFormer lazy imports...")
+            test_modules = lazy_import_codeformer()
+            if test_modules:
                 CODEFORMER_AVAILABLE = True
-                print("✅ CodeFormer components imported successfully after runtime setup")
-
-            except ImportError as e:
-                print(f"⚠️ CodeFormer import failed after runtime setup: {e}")
-                print("Running in limited mode without CodeFormer enhancement")
+                print("✅ CodeFormer components tested successfully")
+            else:
                 CODEFORMER_AVAILABLE = False
-        else:
-            print("⚠️ Runtime environment setup failed")
+                print("⚠️ CodeFormer lazy import test failed")
+            
+            # Only set RUNTIME_READY = True if basic imports succeeded
+            RUNTIME_READY = True
+            print("✅ Runtime environment fully ready")
+
+        except ImportError as e:
+            print(f"⚠️ Import failed during runtime setup: {e}")
+            print("Runtime not ready - keeping in limited mode")
+            RUNTIME_READY = False
+            CODEFORMER_AVAILABLE = False
 
     except Exception as e:
         print(f"❌ Background initialization failed: {e}")
@@ -699,6 +705,12 @@ async def detect_face(file: UploadFile = File(...)):
         raise HTTPException(
             status_code=503,
             detail="Runtime environment not ready. Please wait for initialization to complete."
+        )
+    
+    if not CODEFORMER_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="CodeFormer components not available. ML processing system not ready."
         )
 
     if not file.content_type.startswith('image/'):
