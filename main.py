@@ -1,6 +1,13 @@
 # FastAPI Face Swap API with runtime dependency loading
 import os
 import sys
+
+# CRITICAL: Add CodeFormer paths FIRST before any other imports
+# This ensures we use the local CodeFormer BasicSR instead of pip versions
+sys.path.insert(0, './CodeFormer')
+sys.path.insert(0, './CodeFormer/basicsr')
+print("✅ CodeFormer paths added to sys.path")
+
 import json
 import base64
 import io
@@ -11,62 +18,47 @@ import tempfile
 import urllib.request
 import urllib.error
 
-# CRITICAL FIX: 'type' object is not subscriptable error
-# This error occurs when Python 3.9+ tries to use built-in types as generics
-# before importing libraries that use old typing syntax
-print("🔧 Applying typing compatibility patches...")
+# SIMPLIFIED FIX: Basic typing compatibility for older ML libraries
+# Only apply minimal patches since CodeFormer paths are set correctly
+print("🔧 Applying minimal typing compatibility patches...")
 
-# Monkey-patch built-in types to be subscriptable
-if not hasattr(list, '__class_getitem__'):
-    list.__class_getitem__ = classmethod(lambda cls, item: cls)
-if not hasattr(dict, '__class_getitem__'):
-    dict.__class_getitem__ = classmethod(lambda cls, item: cls)
-if not hasattr(tuple, '__class_getitem__'):
-    tuple.__class_getitem__ = classmethod(lambda cls, item: cls)
-if not hasattr(set, '__class_getitem__'):
-    set.__class_getitem__ = classmethod(lambda cls, item: cls)
+# Basic built-in type subscriptability for Python 3.9+
+for builtin_type in [list, dict, tuple, set]:
+    if not hasattr(builtin_type, '__class_getitem__'):
+        builtin_type.__class_getitem__ = classmethod(lambda cls, item: cls)
 
-# Fix typing module compatibility
-import typing
-if not hasattr(typing, '_GenericAlias'):
-    typing._GenericAlias = type(typing.List[int])
+print("✅ Minimal typing compatibility applied")
 
-# Fix NumPy typing compatibility
-print("🔧 Applying NumPy typing patches...")
-try:
-    import numpy as np
-    # Fix numpy._DTypeMeta subscriptability
-    if hasattr(np, '_DTypeMeta') and not hasattr(np._DTypeMeta, '__class_getitem__'):
-        np._DTypeMeta.__class_getitem__ = classmethod(lambda cls, item: cls)
-    
-    # Fix numpy dtype subscriptability
-    if hasattr(np, 'dtype') and not hasattr(np.dtype, '__class_getitem__'):
-        np.dtype.__class_getitem__ = classmethod(lambda cls, item: cls)
-    
-    # Fix numpy.typing compatibility
-    if hasattr(np, 'typing'):
-        import numpy.typing
-        for attr_name in dir(numpy.typing):
-            attr = getattr(numpy.typing, attr_name)
-            if hasattr(attr, '__module__') and attr.__module__ == 'numpy.typing':
-                if not hasattr(attr, '__class_getitem__'):
-                    try:
-                        attr.__class_getitem__ = classmethod(lambda cls, item: cls)
-                    except (AttributeError, TypeError):
-                        pass
-    
-    print("✅ NumPy typing patches applied")
-except Exception as e:
-    print(f"⚠️ NumPy typing patch failed: {e}")
-
-print("✅ All typing compatibility patches applied")
-
-# Now safely import numpy after patches
+# Import numpy normally like in the local server version
 import numpy as np
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+# Import CodeFormer components with graceful fallback (like local server)
+try:
+    from facelib.detection import init_detection_model
+    from facelib.utils.face_restoration_helper import FaceRestoreHelper
+    from facelib.utils.face_utils import paste_face_back
+    from basicsr.utils import img2tensor, tensor2img
+    from torchvision.transforms.functional import normalize
+    from basicsr.archs.codeformer_arch import CodeFormer
+    CODEFORMER_AVAILABLE = True
+    print("✅ CodeFormer components imported successfully")
+except ImportError as e:
+    print(f"⚠️ CodeFormer import failed: {e}")
+    CODEFORMER_AVAILABLE = False
+
+# Try BasicSR with fallback - use CodeFormer's BasicSR
+try:
+    from basicsr.utils.misc import get_device
+    print("✅ Using CodeFormer's BasicSR")
+except ImportError:
+    print("⚠️ BasicSR import failed, using torch device detection")
+    import torch
+    def get_device():
+        return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def install_runtime_dependencies():
     """Install heavy ML dependencies at runtime"""
@@ -77,7 +69,7 @@ def install_runtime_dependencies():
         "opencv-python-headless==4.8.1.78",
         # Skip basicsr and facexlib - they're included locally in CodeFormer repo
         "lpips==0.1.4",
-        "pyyaml==6.0.1", 
+        "pyyaml==6.0.1",
         "tqdm==4.66.1",
         "addict",        # Required by CodeFormer
         "scikit-image"   # Required by CodeFormer
@@ -231,25 +223,20 @@ def initialize_runtime_in_background():
         # Check if CodeFormer is available and import accordingly
         if RUNTIME_READY:
             try:
-                # Import heavy dependencies after runtime installation
+                # Import additional heavy dependencies after runtime installation
                 import cv2
                 import torch
 
-                # Import CodeFormer dependencies
-                from basicsr.utils import img2tensor, tensor2img
-                from basicsr.utils.registry import ARCH_REGISTRY
-                from torchvision.transforms.functional import normalize
-                from basicsr.archs.codeformer_arch import CodeFormer
-                from facelib.utils.face_restoration_helper import FaceRestoreHelper
-                from facelib.utils.misc import is_gray
-                from facelib.detection import init_detection_model
-                from facelib.utils.face_utils import paste_face_back
+                # CodeFormer components already imported at startup
+                global CODEFORMER_AVAILABLE
+                if CODEFORMER_AVAILABLE:
+                    print("✅ CodeFormer ready for use")
+                else:
+                    print("⚠️ CodeFormer not available - running in limited mode")
 
-                CODEFORMER_AVAILABLE = True
-                print("✅ CodeFormer imports successful")
             except ImportError as e:
-                print(f"⚠️ CodeFormer not available: {e}")
-                print("Running in limited mode without CodeFormer enhancement")
+                print(f"⚠️ Additional imports failed: {e}")
+                print("Running in limited mode")
         else:
             print("⚠️ Runtime environment setup failed")
 
