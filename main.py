@@ -120,49 +120,46 @@ from fastapi.middleware.cors import CORSMiddleware
 CODEFORMER_AVAILABLE = False
 
 def install_runtime_dependencies():
-    """Install heavy ML dependencies at runtime"""
-    dependencies = [
-        "numpy>=1.23.0",  # Compatible with Python 3.9+ (your guidance: 3.11+ needs 1.23.0+)
-        "torch==2.0.1+cpu --index-url https://download.pytorch.org/whl/cpu",
-        "torchvision==0.15.2+cpu --index-url https://download.pytorch.org/whl/cpu",
-        "opencv-python==4.8.1.78",  # Compatible with NumPy 1.20.0
-        # Skip basicsr and facexlib - they're included locally in CodeFormer repo
-        "lpips==0.1.4",
-        "pyyaml==6.0.1",
-        "tqdm==4.66.1",
-        "addict",        # Required by CodeFormer
-        "scikit-image"   # Required by CodeFormer
-    ]
-
-    print("🔄 Installing runtime dependencies...")
+    """Install heavy ML dependencies at runtime using CodeFormer's tested requirements"""
     
-    # Special handling for NumPy to avoid compatibility issues (your guidance)
-    print("🧹 Ensuring clean NumPy installation...")
+    print("🔄 Installing runtime dependencies using CodeFormer's requirements...")
+    
+    # First, install from CodeFormer's requirements.txt for compatibility
+    print("📦 Installing CodeFormer's tested dependencies...")
     try:
-        # Clear pip cache first
-        subprocess.run([sys.executable, "-m", "pip", "cache", "purge"], check=False)
-        # Uninstall any existing numpy to avoid conflicts
-        subprocess.run([sys.executable, "-m", "pip", "uninstall", "numpy", "-y"], check=False)
-        # Install fresh numpy with no cache
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-cache-dir", "numpy>=1.23.0"])
-        print("✅ Clean NumPy installation completed")
+        # Install directly from CodeFormer's requirements file
+        cmd = [sys.executable, "-m", "pip", "install", "--no-cache-dir", "-r", "./CodeFormer/requirements.txt"]
+        subprocess.check_call(cmd)
+        print("✅ CodeFormer requirements installed successfully")
     except subprocess.CalledProcessError as e:
-        print(f"⚠️ NumPy cleanup failed: {e}")
-    
-    for dep in dependencies:
-        # Skip numpy since we handled it specially above
-        if dep.startswith("numpy"):
-            continue
-            
-        try:
-            print(f"📦 Installing {dep.split('==')[0]}")
-            # Install with no-cache and reduced memory usage
-            cmd = [sys.executable, "-m", "pip", "install", "--no-cache-dir", "--no-build-isolation"] + dep.split()
-            subprocess.check_call(cmd)
-        except subprocess.CalledProcessError as e:
-            print(f"⚠️ Failed to install {dep}: {e}")
-            # Continue with other dependencies instead of failing completely
-            continue
+        print(f"⚠️ Failed to install CodeFormer requirements: {e}")
+        
+        # Fallback to manual installation with tested versions
+        print("🔄 Falling back to manual dependency installation...")
+        dependencies = [
+            "numpy",  # Use CodeFormer's version
+            "torch>=1.7.1",  # CodeFormer's requirement
+            "torchvision",
+            "opencv-python",
+            "Pillow",
+            "pyyaml",
+            "requests",
+            "scikit-image",
+            "scipy",
+            "tqdm",
+            "lpips",
+            "addict"
+        ]
+        
+        print("🔄 Installing fallback dependencies...")
+        for dep in dependencies:
+            try:
+                print(f"📦 Installing {dep}")
+                cmd = [sys.executable, "-m", "pip", "install", "--no-cache-dir", dep]
+                subprocess.check_call(cmd)
+            except subprocess.CalledProcessError as e:
+                print(f"⚠️ Failed to install {dep}: {e}")
+                continue
     print("✅ Runtime dependencies installation completed")
     return True
 
