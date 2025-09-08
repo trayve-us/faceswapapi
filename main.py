@@ -36,29 +36,8 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import CodeFormer components with graceful fallback (like local server)
-try:
-    from facelib.detection import init_detection_model
-    from facelib.utils.face_restoration_helper import FaceRestoreHelper
-    from facelib.utils.face_utils import paste_face_back
-    from basicsr.utils import img2tensor, tensor2img
-    from torchvision.transforms.functional import normalize
-    from basicsr.archs.codeformer_arch import CodeFormer
-    CODEFORMER_AVAILABLE = True
-    print("✅ CodeFormer components imported successfully")
-except ImportError as e:
-    print(f"⚠️ CodeFormer import failed: {e}")
-    CODEFORMER_AVAILABLE = False
-
-# Try BasicSR with fallback - use CodeFormer's BasicSR
-try:
-    from basicsr.utils.misc import get_device
-    print("✅ Using CodeFormer's BasicSR")
-except ImportError:
-    print("⚠️ BasicSR import failed, using torch device detection")
-    import torch
-    def get_device():
-        return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# Initialize CodeFormer availability flag (will be set after runtime installation)
+CODEFORMER_AVAILABLE = False
 
 def install_runtime_dependencies():
     """Install heavy ML dependencies at runtime"""
@@ -223,20 +202,36 @@ def initialize_runtime_in_background():
         # Check if CodeFormer is available and import accordingly
         if RUNTIME_READY:
             try:
-                # Import additional heavy dependencies after runtime installation
+                # Import heavy dependencies after runtime installation
                 import cv2
                 import torch
-
-                # CodeFormer components already imported at startup
+                
+                # Now import CodeFormer components after dependencies are available
+                from facelib.detection import init_detection_model
+                from facelib.utils.face_restoration_helper import FaceRestoreHelper
+                from facelib.utils.face_utils import paste_face_back
+                from basicsr.utils import img2tensor, tensor2img
+                from torchvision.transforms.functional import normalize
+                from basicsr.archs.codeformer_arch import CodeFormer
+                
+                # Try BasicSR with fallback
+                try:
+                    from basicsr.utils.misc import get_device
+                    print("✅ Using CodeFormer's BasicSR")
+                except ImportError:
+                    print("⚠️ BasicSR import failed, using torch device detection")
+                    def get_device():
+                        return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+                
                 global CODEFORMER_AVAILABLE
-                if CODEFORMER_AVAILABLE:
-                    print("✅ CodeFormer ready for use")
-                else:
-                    print("⚠️ CodeFormer not available - running in limited mode")
+                CODEFORMER_AVAILABLE = True
+                print("✅ CodeFormer components imported successfully after runtime setup")
 
             except ImportError as e:
-                print(f"⚠️ Additional imports failed: {e}")
-                print("Running in limited mode")
+                print(f"⚠️ CodeFormer import failed after runtime setup: {e}")
+                print("Running in limited mode without CodeFormer enhancement")
+                global CODEFORMER_AVAILABLE
+                CODEFORMER_AVAILABLE = False
         else:
             print("⚠️ Runtime environment setup failed")
 
