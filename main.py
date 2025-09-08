@@ -223,14 +223,12 @@ def initialize_runtime_in_background():
                     def get_device():
                         return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
                 
-                global CODEFORMER_AVAILABLE
                 CODEFORMER_AVAILABLE = True
                 print("✅ CodeFormer components imported successfully after runtime setup")
 
             except ImportError as e:
                 print(f"⚠️ CodeFormer import failed after runtime setup: {e}")
                 print("Running in limited mode without CodeFormer enhancement")
-                global CODEFORMER_AVAILABLE
                 CODEFORMER_AVAILABLE = False
         else:
             print("⚠️ Runtime environment setup failed")
