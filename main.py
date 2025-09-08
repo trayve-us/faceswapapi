@@ -290,22 +290,9 @@ def initialize_runtime_in_background():
                 import torch
                 print("✅ PyTorch imported successfully")
                 
-                # Now import CodeFormer components after cv2/torch are loaded
-                from facelib.detection import init_detection_model
-                from facelib.utils.face_restoration_helper import FaceRestoreHelper
-                from facelib.utils.face_utils import paste_face_back
-                from basicsr.utils import img2tensor, tensor2img
-                from torchvision.transforms.functional import normalize
-                from basicsr.archs.codeformer_arch import CodeFormer
-                
-                # Try BasicSR with fallback
-                try:
-                    from basicsr.utils.misc import get_device
-                    print("✅ Using CodeFormer's BasicSR")
-                except ImportError:
-                    print("⚠️ BasicSR import failed, using torch device detection")
-                    def get_device():
-                        return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+                # LAZY LOADING: Don't import CodeFormer components here to avoid DTypeMeta error
+                # Instead, import them only when actually needed in the API endpoints
+                print("🔄 CodeFormer components will be imported lazily when needed")
                 
                 CODEFORMER_AVAILABLE = True
                 print("✅ CodeFormer components imported successfully after runtime setup")
@@ -324,6 +311,39 @@ def initialize_runtime_in_background():
     finally:
         INITIALIZATION_IN_PROGRESS = False
         print(f"🔄 Background initialization completed. Runtime ready: {RUNTIME_READY}")
+
+# Lazy import function to avoid DTypeMeta errors during startup
+def lazy_import_codeformer():
+    """Import CodeFormer components only when actually needed"""
+    try:
+        from facelib.detection import init_detection_model
+        from facelib.utils.face_restoration_helper import FaceRestoreHelper
+        from facelib.utils.face_utils import paste_face_back
+        from basicsr.utils import img2tensor, tensor2img
+        from torchvision.transforms.functional import normalize
+        from basicsr.archs.codeformer_arch import CodeFormer
+        
+        # Try BasicSR with fallback
+        try:
+            from basicsr.utils.misc import get_device
+        except ImportError:
+            import torch
+            def get_device():
+                return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        return {
+            'init_detection_model': init_detection_model,
+            'FaceRestoreHelper': FaceRestoreHelper,
+            'paste_face_back': paste_face_back,
+            'img2tensor': img2tensor,
+            'tensor2img': tensor2img,
+            'normalize': normalize,
+            'CodeFormer': CodeFormer,
+            'get_device': get_device
+        }
+    except ImportError as e:
+        print(f"❌ Lazy import failed: {e}")
+        return None
 
 @app.on_event("startup")
 async def startup_event():
@@ -351,7 +371,16 @@ class FaceSwapProcessor:
         """Initialize face detection and processing components"""
         print("🚀 Initializing FaceSwapProcessor with CodeFormer...")
 
-        self.device = get_device()
+        # Lazy import CodeFormer components
+        self.codeformer_modules = lazy_import_codeformer()
+        if not self.codeformer_modules:
+            print("❌ CodeFormer lazy import failed - cannot initialize")
+            self.face_helper = None
+            self.net = None
+            return
+
+        # Get device using lazy imported function
+        self.device = self.codeformer_modules['get_device']()
         print(f"Using device: {self.device}")
 
         if not CODEFORMER_AVAILABLE:
@@ -363,6 +392,7 @@ class FaceSwapProcessor:
         try:
             # Initialize FaceRestoreHelper with RetinaFace ResNet50
             # Reference: CodeFormer/inference_codeformer.py line 165
+            FaceRestoreHelper = self.codeformer_modules['FaceRestoreHelper']
             self.face_helper = FaceRestoreHelper(
                 upscale=1,
                 face_size=512,  # CodeFormer's standard face size
@@ -375,6 +405,7 @@ class FaceSwapProcessor:
 
             # Initialize CodeFormer network
             try:
+                CodeFormer = self.codeformer_modules['CodeFormer']
                 self.net = CodeFormer(dim_embd=512, codebook_size=1024, n_head=8, n_layers=9,
                                     connect_list=['32', '64', '128', '256']).to(self.device)
                 # Load pretrained weights - Heroku paths
@@ -496,6 +527,11 @@ class FaceSwapProcessor:
 
             # Step 4: Enhance all faces with CodeFormer
             enhanced_faces = []
+            # Get lazy imported functions
+            img2tensor = self.codeformer_modules['img2tensor']
+            tensor2img = self.codeformer_modules['tensor2img']
+            normalize = self.codeformer_modules['normalize']
+            
             for idx, cropped_face in enumerate(self.face_helper.cropped_faces):
                 # Convert to tensor
                 cropped_face_t = img2tensor(cropped_face / 255., bgr2rgb=True, float32=True)
