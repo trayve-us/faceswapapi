@@ -42,10 +42,10 @@ CODEFORMER_AVAILABLE = False
 def install_runtime_dependencies():
     """Install heavy ML dependencies at runtime"""
     dependencies = [
-        "numpy==1.21.1",  # Use older numpy that supports np.bool
+        "numpy==1.23.5",  # Specific version that works with Python 3.9+ and cv2
         "torch==2.0.1+cpu --index-url https://download.pytorch.org/whl/cpu",
         "torchvision==0.15.2+cpu --index-url https://download.pytorch.org/whl/cpu",
-        "opencv-python-headless==4.8.1.78",
+        "opencv-python==4.8.1.78",  # Specific version compatible with numpy
         # Skip basicsr and facexlib - they're included locally in CodeFormer repo
         "lpips==0.1.4",
         "pyyaml==6.0.1",
@@ -202,11 +202,15 @@ def initialize_runtime_in_background():
         # Check if CodeFormer is available and import accordingly
         if RUNTIME_READY:
             try:
-                # Import heavy dependencies after runtime installation
+                # CRITICAL: Import cv2 FIRST to avoid numpy._DTypeMeta error
                 import cv2
-                import torch
+                print("✅ OpenCV imported successfully")
                 
-                # Now import CodeFormer components after dependencies are available
+                # Import torch after cv2
+                import torch
+                print("✅ PyTorch imported successfully")
+                
+                # Now import CodeFormer components after cv2/torch are loaded
                 from facelib.detection import init_detection_model
                 from facelib.utils.face_restoration_helper import FaceRestoreHelper
                 from facelib.utils.face_utils import paste_face_back
