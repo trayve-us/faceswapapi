@@ -122,7 +122,7 @@ CODEFORMER_AVAILABLE = False
 def install_runtime_dependencies():
     """Install heavy ML dependencies at runtime"""
     dependencies = [
-        "numpy==1.20.0",  # RESEARCH-BASED FIX: StackOverflow confirms 1.20.0 solves _DTypeMeta error
+        "numpy>=1.23.0",  # Compatible with Python 3.9+ (your guidance: 3.11+ needs 1.23.0+)
         "torch==2.0.1+cpu --index-url https://download.pytorch.org/whl/cpu",
         "torchvision==0.15.2+cpu --index-url https://download.pytorch.org/whl/cpu",
         "opencv-python==4.8.1.78",  # Compatible with NumPy 1.20.0
@@ -135,7 +135,25 @@ def install_runtime_dependencies():
     ]
 
     print("🔄 Installing runtime dependencies...")
+    
+    # Special handling for NumPy to avoid compatibility issues (your guidance)
+    print("🧹 Ensuring clean NumPy installation...")
+    try:
+        # Clear pip cache first
+        subprocess.run([sys.executable, "-m", "pip", "cache", "purge"], check=False)
+        # Uninstall any existing numpy to avoid conflicts
+        subprocess.run([sys.executable, "-m", "pip", "uninstall", "numpy", "-y"], check=False)
+        # Install fresh numpy with no cache
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-cache-dir", "numpy>=1.23.0"])
+        print("✅ Clean NumPy installation completed")
+    except subprocess.CalledProcessError as e:
+        print(f"⚠️ NumPy cleanup failed: {e}")
+    
     for dep in dependencies:
+        # Skip numpy since we handled it specially above
+        if dep.startswith("numpy"):
+            continue
+            
         try:
             print(f"📦 Installing {dep.split('==')[0]}")
             # Install with no-cache and reduced memory usage
