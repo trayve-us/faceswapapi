@@ -5,7 +5,6 @@ import json
 import base64
 import io
 import subprocess
-import numpy as np
 from PIL import Image
 from typing import Optional, Tuple
 import tempfile
@@ -32,7 +31,38 @@ import typing
 if not hasattr(typing, '_GenericAlias'):
     typing._GenericAlias = type(typing.List[int])
 
-print("✅ Typing compatibility patches applied")
+# Fix NumPy typing compatibility
+print("🔧 Applying NumPy typing patches...")
+try:
+    import numpy as np
+    # Fix numpy._DTypeMeta subscriptability
+    if hasattr(np, '_DTypeMeta') and not hasattr(np._DTypeMeta, '__class_getitem__'):
+        np._DTypeMeta.__class_getitem__ = classmethod(lambda cls, item: cls)
+    
+    # Fix numpy dtype subscriptability
+    if hasattr(np, 'dtype') and not hasattr(np.dtype, '__class_getitem__'):
+        np.dtype.__class_getitem__ = classmethod(lambda cls, item: cls)
+    
+    # Fix numpy.typing compatibility
+    if hasattr(np, 'typing'):
+        import numpy.typing
+        for attr_name in dir(numpy.typing):
+            attr = getattr(numpy.typing, attr_name)
+            if hasattr(attr, '__module__') and attr.__module__ == 'numpy.typing':
+                if not hasattr(attr, '__class_getitem__'):
+                    try:
+                        attr.__class_getitem__ = classmethod(lambda cls, item: cls)
+                    except (AttributeError, TypeError):
+                        pass
+    
+    print("✅ NumPy typing patches applied")
+except Exception as e:
+    print(f"⚠️ NumPy typing patch failed: {e}")
+
+print("✅ All typing compatibility patches applied")
+
+# Now safely import numpy after patches
+import numpy as np
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
