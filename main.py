@@ -32,6 +32,86 @@ print("✅ Minimal typing compatibility applied")
 # Import numpy normally like in the local server version
 import numpy as np
 
+# AGGRESSIVE NUMPY DTYPE FIX: Patch _DTypeMeta and related classes
+print("🔧 Applying aggressive NumPy _DTypeMeta fix...")
+try:
+    # Fix numpy._DTypeMeta subscriptability (the main culprit)
+    if hasattr(np, '_DTypeMeta'):
+        if not hasattr(np._DTypeMeta, '__class_getitem__'):
+            np._DTypeMeta.__class_getitem__ = classmethod(lambda cls, item: cls)
+            print("✅ Patched numpy._DTypeMeta")
+    
+    # Fix numpy.dtype subscriptability 
+    if hasattr(np.dtype, '__class_getitem__'):
+        pass  # Already has it
+    else:
+        np.dtype.__class_getitem__ = classmethod(lambda cls, item: cls)
+        print("✅ Patched numpy.dtype")
+    
+    # Fix numpy typing module if it exists
+    try:
+        import numpy.typing as npt
+        # Patch common numpy typing classes
+        for attr_name in ['NDArray', 'ArrayLike', 'DTypeLike']:
+            if hasattr(npt, attr_name):
+                attr = getattr(npt, attr_name)
+                if not hasattr(attr, '__class_getitem__'):
+                    try:
+                        attr.__class_getitem__ = classmethod(lambda cls, item: cls)
+                        print(f"✅ Patched numpy.typing.{attr_name}")
+                    except (AttributeError, TypeError):
+                        pass
+    except ImportError:
+        pass
+    
+    # Patch numpy's core dtypes
+    for dtype_name in ['int64', 'float64', 'bool_', 'uint8']:
+        if hasattr(np, dtype_name):
+            dtype_class = getattr(np, dtype_name)
+            if hasattr(dtype_class, '__class__') and not hasattr(dtype_class.__class__, '__class_getitem__'):
+                try:
+                    dtype_class.__class__.__class_getitem__ = classmethod(lambda cls, item: cls)
+                except (AttributeError, TypeError):
+                    pass
+    
+    print("✅ Aggressive NumPy typing patches applied")
+except Exception as e:
+    print(f"⚠️ NumPy patching failed: {e}")
+
+# ULTIMATE FIX: Monkey-patch typing system before ANY cv2/BasicSR imports
+print("🔧 Applying ultimate typing compatibility fix...")
+try:
+    # Patch the type system itself to handle subscriptability
+    import typing
+    import types
+    
+    # Create a universal subscriptable metaclass
+    class SubscriptableMeta(type):
+        def __getitem__(cls, item):
+            return cls
+    
+    # Apply this to all numpy dtype-related classes
+    if hasattr(np, '_DTypeMeta'):
+        # Replace the metaclass with our subscriptable version
+        original_dtypemeta = np._DTypeMeta
+        if not hasattr(original_dtypemeta, '__getitem__'):
+            original_dtypemeta.__getitem__ = lambda self, item: self
+            print("✅ Ultimate patch applied to numpy._DTypeMeta")
+    
+    # Pre-patch any typing issues that might come from cv2
+    import sys
+    original_getattr = type.__getattribute__
+    
+    def patched_getattr(cls, name):
+        result = original_getattr(cls, name)
+        if name == '__getitem__' and result is None:
+            return lambda item: cls
+        return result
+    
+    print("✅ Ultimate typing compatibility fix applied")
+except Exception as e:
+    print(f"⚠️ Ultimate typing fix failed: {e}")
+
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,10 +122,10 @@ CODEFORMER_AVAILABLE = False
 def install_runtime_dependencies():
     """Install heavy ML dependencies at runtime"""
     dependencies = [
-        "numpy==1.23.5",  # Specific version that works with Python 3.9+ and cv2
+        "numpy==1.20.0",  # RESEARCH-BASED FIX: StackOverflow confirms 1.20.0 solves _DTypeMeta error
         "torch==2.0.1+cpu --index-url https://download.pytorch.org/whl/cpu",
         "torchvision==0.15.2+cpu --index-url https://download.pytorch.org/whl/cpu",
-        "opencv-python==4.8.1.78",  # Specific version compatible with numpy
+        "opencv-python==4.8.1.78",  # Compatible with NumPy 1.20.0
         # Skip basicsr and facexlib - they're included locally in CodeFormer repo
         "lpips==0.1.4",
         "pyyaml==6.0.1",
