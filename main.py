@@ -12,35 +12,27 @@ import tempfile
 import urllib.request
 import urllib.error
 
-# Python version compatibility for typing
-if sys.version_info >= (3, 9):
-    from typing import List, Dict
-else:
-    from typing import List, Dict
+# CRITICAL FIX: 'type' object is not subscriptable error
+# This error occurs when Python 3.9+ tries to use built-in types as generics
+# before importing libraries that use old typing syntax
+print("🔧 Applying typing compatibility patches...")
 
-# Comprehensive fix for BasicSR typing compatibility issues
+# Monkey-patch built-in types to be subscriptable
+if not hasattr(list, '__class_getitem__'):
+    list.__class_getitem__ = classmethod(lambda cls, item: cls)
+if not hasattr(dict, '__class_getitem__'):
+    dict.__class_getitem__ = classmethod(lambda cls, item: cls)
+if not hasattr(tuple, '__class_getitem__'):
+    tuple.__class_getitem__ = classmethod(lambda cls, item: cls)
+if not hasattr(set, '__class_getitem__'):
+    set.__class_getitem__ = classmethod(lambda cls, item: cls)
+
+# Fix typing module compatibility
 import typing
-# Fix for Python 3.9+ compatibility with older packages
 if not hasattr(typing, '_GenericAlias'):
     typing._GenericAlias = type(typing.List[int])
 
-# Additional compatibility patches for typing
-try:
-    # Patch for subscriptable type errors
-    if hasattr(typing, '_special_form'):
-        typing._special_form.__class__.__getitem__ = lambda self, item: self
-    
-    # Ensure Union is subscriptable
-    if hasattr(typing, 'Union'):
-        if not hasattr(typing.Union, '__getitem__'):
-            typing.Union.__getitem__ = lambda self, item: self
-            
-    # Ensure Optional is subscriptable  
-    if hasattr(typing, 'Optional'):
-        if not hasattr(typing.Optional, '__getitem__'):
-            typing.Optional.__getitem__ = lambda self, item: self
-except Exception as e:
-    print(f"Warning: Typing compatibility patch failed: {e}")
+print("✅ Typing compatibility patches applied")
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
@@ -49,17 +41,16 @@ from fastapi.middleware.cors import CORSMiddleware
 def install_runtime_dependencies():
     """Install heavy ML dependencies at runtime"""
     dependencies = [
-        "numpy==1.21.1",     # Use older numpy that supports np.bool (critical fix)
-        "torch==2.6.0+cpu --index-url https://download.pytorch.org/whl/cpu",
-        "torchvision==0.21.0+cpu --index-url https://download.pytorch.org/whl/cpu", 
-        "opencv-python-headless==4.11.0.86",
-        # Don't install BasicSR and facexlib - they come with CodeFormer locally
+        "numpy==1.21.1",  # Use older numpy that supports np.bool
+        "torch==2.0.1+cpu --index-url https://download.pytorch.org/whl/cpu",
+        "torchvision==0.15.2+cpu --index-url https://download.pytorch.org/whl/cpu",
+        "opencv-python-headless==4.8.1.78",
+        # Skip basicsr and facexlib - they're included locally in CodeFormer repo
         "lpips==0.1.4",
-        "pyyaml==6.0.2",     # Use same version as server environment
-        "tqdm==4.66.5",      # Use same version as server environment
-        "addict",            # From CodeFormer requirements
-        "scikit-image",      # From CodeFormer requirements  
-        "scipy"              # From CodeFormer requirements
+        "pyyaml==6.0.1", 
+        "tqdm==4.66.1",
+        "addict",        # Required by CodeFormer
+        "scikit-image"   # Required by CodeFormer
     ]
 
     print("🔄 Installing runtime dependencies...")
@@ -207,61 +198,25 @@ def initialize_runtime_in_background():
                 print("✅ Runtime environment ready")
                 RUNTIME_READY = True
 
-        # Check if CodeFormer is available with local BasicSR and facelib
+        # Check if CodeFormer is available and import accordingly
         if RUNTIME_READY:
             try:
                 # Import heavy dependencies after runtime installation
-                print("🔄 Importing cv2...")
                 import cv2
-                print("✅ cv2 imported successfully")
-                
-                print("🔄 Importing torch...")
                 import torch
-                print("✅ torch imported successfully")
 
-                # Add CodeFormer directory to Python path for local imports
-                print("🔄 Adding CodeFormer to Python path...")
-                import sys
-                codeformer_path = './CodeFormer'
-                if codeformer_path not in sys.path:
-                    sys.path.insert(0, codeformer_path)
-                print("✅ CodeFormer path added successfully")
-
-                # Import CodeFormer's local dependencies
-                print("🔄 Importing local basicsr utils...")
+                # Import CodeFormer dependencies
                 from basicsr.utils import img2tensor, tensor2img
-                print("✅ local basicsr utils imported successfully")
-                
-                print("🔄 Importing local basicsr registry...")
                 from basicsr.utils.registry import ARCH_REGISTRY
-                print("✅ local basicsr registry imported successfully")
-                
-                print("🔄 Importing torchvision transforms...")
                 from torchvision.transforms.functional import normalize
-                print("✅ torchvision transforms imported successfully")
-                
-                print("🔄 Importing local CodeFormer architecture...")
                 from basicsr.archs.codeformer_arch import CodeFormer
-                print("✅ local CodeFormer architecture imported successfully")
-                
-                print("🔄 Importing local face restoration helper...")
                 from facelib.utils.face_restoration_helper import FaceRestoreHelper
-                print("✅ local face restoration helper imported successfully")
-                
-                print("🔄 Importing local facelib misc...")
                 from facelib.utils.misc import is_gray
-                print("✅ local facelib misc imported successfully")
-                
-                print("🔄 Importing local face detection...")
                 from facelib.detection import init_detection_model
-                print("✅ local face detection imported successfully")
-                
-                print("🔄 Importing local face utils...")
                 from facelib.utils.face_utils import paste_face_back
-                print("✅ local face utils imported successfully")
 
                 CODEFORMER_AVAILABLE = True
-                print("✅ CodeFormer local imports successful")
+                print("✅ CodeFormer imports successful")
             except ImportError as e:
                 print(f"⚠️ CodeFormer not available: {e}")
                 print("Running in limited mode without CodeFormer enhancement")
